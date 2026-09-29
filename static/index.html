@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Story Stocks - Yahoo Finance Intelligence Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #090d16;
+      --card-bg: rgba(17, 24, 39, 0.75);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --accent-blue: #3b82f6;
+      --accent-purple: #8b5cf6;
+      --accent-green: #10b981;
+      --accent-red: #ef4444;
+      --accent-cyan: #06b6d4;
+      --text-main: #f9fafb;
+      --text-muted: #9ca3af;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      background-color: var(--bg-dark);
+      background-image: 
+        radial-gradient(at 10% 20%, rgba(59, 130, 246, 0.15) 0px, transparent 45%),
+        radial-gradient(at 90% 80%, rgba(139, 92, 246, 0.15) 0px, transparent 45%);
+      color: var(--text-main);
+      min-height: 100vh;
+      padding: 24px;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 28px;
+      padding-bottom: 18px;
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    .logo-box {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .logo-icon {
+      width: 44px;
+      height: 44px;
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 22px;
+      color: #fff;
+      box-shadow: 0 4px 20px rgba(59, 130, 246, 0.4);
+    }
+
+    .logo-title {
+      font-size: 26px;
+      font-weight: 700;
+      background: linear-gradient(90deg, #ffffff, #93c5fd);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .provider-pill {
+      background: rgba(59, 130, 246, 0.15);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      color: #93c5fd;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .search-box {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+
+    .search-input {
+      flex: 1;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      padding: 12px 18px;
+      border-radius: 12px;
+      color: #fff;
+      font-family: inherit;
+      font-size: 14px;
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    .search-input:focus {
+      border-color: var(--accent-blue);
+      box-shadow: 0 0 12px rgba(59, 130, 246, 0.3);
+    }
+
+    .btn-search {
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+      border: none;
+      color: white;
+      padding: 0 24px;
+      border-radius: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.1s;
+    }
+
+    .btn-search:hover {
+      transform: scale(1.02);
+    }
+
+    .controls-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--card-border);
+      padding: 16px 20px;
+      border-radius: 16px;
+      margin-bottom: 28px;
+      align-items: center;
+    }
+
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .control-label {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    select {
+      background: rgba(9, 13, 22, 0.9);
+      border: 1px solid var(--card-border);
+      color: var(--text-main);
+      padding: 8px 14px;
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 14px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .stories-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+      gap: 24px;
+    }
+
+    .story-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .story-card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(59, 130, 246, 0.4);
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+    }
+
+    .card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 14px;
+    }
+
+    .ticker-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 18px;
+      font-weight: 700;
+      color: #fff;
+      background: rgba(255, 255, 255, 0.08);
+      padding: 4px 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .price-box { text-align: right; }
+    .stock-price { font-family: 'JetBrains Mono', monospace; font-weight: 600; font-size: 18px; }
+    .stock-change { font-size: 13px; font-weight: 600; margin-top: 2px; }
+    .positive { color: var(--accent-green); }
+    .negative { color: var(--accent-red); }
+
+    .sector-tag-group {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+
+    .tag {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 20px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .tag-sector { background: rgba(59, 130, 246, 0.15); color: #93c5fd; border: 1px solid rgba(59, 130, 246, 0.3); }
+    .tag-industry { background: rgba(139, 92, 246, 0.15); color: #c084fc; border: 1px solid rgba(139, 92, 246, 0.3); }
+
+    .headline {
+      font-size: 16px;
+      font-weight: 600;
+      line-height: 1.4;
+      margin-bottom: 10px;
+      color: #ffffff;
+    }
+
+    .headline a {
+      color: #ffffff;
+      text-decoration: none;
+    }
+    .headline a:hover { text-decoration: underline; color: #93c5fd; }
+
+    .summary {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.5;
+      margin-bottom: 16px;
+    }
+
+    .impact-box {
+      background: rgba(0, 0, 0, 0.25);
+      border-left: 3px solid var(--accent-cyan);
+      padding: 10px 14px;
+      border-radius: 0 10px 10px 0;
+      margin-bottom: 16px;
+      font-size: 12px;
+      color: #cbd5e1;
+    }
+
+    .card-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 14px;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      font-size: 12px;
+    }
+
+    .sentiment-score {
+      background: var(--accent-green);
+      color: #000;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo-box">
+      <div class="logo-icon">S</div>
+      <div>
+        <div class="logo-title">Story Stocks</div>
+        <div style="font-size: 12px; color: var(--text-muted)">Sector & Industry Momentum Intelligence</div>
+      </div>
+    </div>
+    <div class="provider-pill">
+      <span>● Feed:</span>
+      <strong>Yahoo Finance Live</strong>
+    </div>
+  </header>
+
+  <div class="search-box">
+    <input type="text" id="tickerSearchInput" class="search-input" placeholder="Enter stock ticker (e.g. NVDA, TSLA, AAPL, MSFT)..." onkeypress="if(event.key === 'Enter') addTicker()">
+    <button class="btn-search" onclick="addTicker()">Analyze Ticker Story</button>
+  </div>
+
+  <div class="controls-bar">
+    <div class="control-group">
+      <span class="control-label">Sort By:</span>
+      <select id="sortSelect" onchange="loadStories()">
+        <option value="sentiment">Sentiment Score (High to Low)</option>
+        <option value="sector">Sector & Industry</option>
+        <option value="industry">Industry</option>
+        <option value="change">% Price Change</option>
+        <option value="ticker">Ticker Symbol</option>
+      </select>
+    </div>
+
+    <div class="control-group">
+      <span class="control-label">Sector:</span>
+      <select id="sectorSelect" onchange="loadStories()">
+        <option value="All">All Sectors</option>
+      </select>
+    </div>
+
+    <div class="control-group">
+      <span class="control-label">Industry:</span>
+      <select id="industrySelect" onchange="loadStories()">
+        <option value="All">All Industries</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="stories-grid" id="storiesGrid">
+    <div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 40px;">
+      Fetching live Yahoo Finance news & stock stories...
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = '/api/v1';
+
+    async function fetchFilters() {
+      try {
+        const res = await fetch(`${API_BASE}/meta/filters`);
+        const data = await res.json();
+        
+        const sectorSelect = document.getElementById('sectorSelect');
+        sectorSelect.innerHTML = data.sectors.map(s => `<option value="${s}">${s}</option>`).join('');
+        
+        const industrySelect = document.getElementById('industrySelect');
+        industrySelect.innerHTML = data.industries.map(i => `<option value="${i}">${i}</option>`).join('');
+      } catch (err) {
+        console.error('Error fetching filters:', err);
+      }
+    }
+
+    async function loadStories() {
+      const sortBy = document.getElementById('sortSelect').value;
+      const sector = document.getElementById('sectorSelect').value;
+      const industry = document.getElementById('industrySelect').value;
+
+      try {
+        const res = await fetch(`${API_BASE}/stories?sort_by=${sortBy}&sector=${sector}&industry=${industry}`);
+        const stories = await res.json();
+        renderStories(stories);
+      } catch (err) {
+        console.error('Error loading stories:', err);
+      }
+    }
+
+    async function addTicker() {
+      const input = document.getElementById('tickerSearchInput');
+      const ticker = input.value.trim().toUpperCase();
+      if (!ticker) return;
+
+      const grid = document.getElementById('storiesGrid');
+      grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 40px;">Analyzing story & news feed for <strong>${ticker}</strong> via Yahoo Finance...</div>`;
+
+      try {
+        const res = await fetch(`${API_BASE}/stocks/${ticker}`);
+        const data = await res.json();
+        if (data.error) {
+          alert(`Ticker ${ticker} not found.`);
+          loadStories();
+        } else {
+          renderStories([data]);
+        }
+      } catch (err) {
+        console.error('Error fetching ticker:', err);
+        loadStories();
+      }
+    }
+
+    function renderStories(stories) {
+      const grid = document.getElementById('storiesGrid');
+      if (!stories || stories.length === 0) {
+        grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 40px;">No story stocks match the selected sector/industry criteria.</div>';
+        return;
+      }
+
+      grid.innerHTML = stories.map(story => {
+        const isPos = story.change_percent >= 0;
+        return `
+          <div class="story-card">
+            <div>
+              <div class="card-top">
+                <div>
+                  <span class="ticker-badge">${story.ticker}</span>
+                  <div style="font-size: 13px; color: var(--text-muted); margin-top: 6px;">${story.company_name}</div>
+                </div>
+                <div class="price-box">
+                  <div class="stock-price">$${story.price.toFixed(2)}</div>
+                  <div class="stock-change ${isPos ? 'positive' : 'negative'}">
+                    ${isPos ? '▲ +' : '▼ '}${story.change_percent.toFixed(2)}%
+                  </div>
+                </div>
+              </div>
+
+              <div class="sector-tag-group">
+                <span class="tag tag-sector">${story.sector}</span>
+                <span class="tag tag-industry">${story.industry}</span>
+              </div>
+
+              <div class="headline">
+                <a href="${story.news_url}" target="_blank" title="Read story on Yahoo Finance">${story.headline} ↗</a>
+              </div>
+              <div class="summary">${story.summary}</div>
+              
+              <div class="impact-box">
+                <strong>Narrative Impact:</strong> ${story.product_impact}
+              </div>
+            </div>
+
+            <div class="card-footer">
+              <span style="color: var(--text-muted)">Via ${story.publisher}</span>
+              <div style="display:flex; align-items:center; gap:6px;">
+                <span style="color:var(--text-muted)">Sentiment</span>
+                <span class="sentiment-score">${story.sentiment_score}</span>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    fetchFilters();
+    loadStories();
+  </script>
+</body>
+</html>
