@@ -42,25 +42,33 @@ def fetch_yahoo_news(ticker: str) -> List[Dict[str, Any]]:
         print(f"Error fetching news for {ticker}: {e}")
         return []
 
+INVESTMENT_KEYWORDS = [
+    "invest", "investment", "funding", "financing", "billion", "million", "acquisition",
+    "venture", "capital", "backed", "stake", "partnership", "preferred shares", "convertible"
+]
+
 def calculate_reward_and_sentiment(ticker: str, info: Dict[str, Any], text: str, price_change: float) -> Dict[str, Any]:
     """
     Calculate dynamic sentiment score and estimated revenue impact ($ / year)
     based on market cap, price momentum, company revenue, and article text.
+    Gives explicit score boost when major investments / capital backing are detected.
     """
     market_cap = info.get("marketCap") or 10_000_000_000
     total_revenue = info.get("totalRevenue") or (market_cap * 0.15)
     
-    # Calculate sentiment score using price momentum + keyword NLP signals + revenue scale
+    # Calculate sentiment score using price momentum + keyword NLP signals + investment signals
     text_lower = text.lower()
     bullish_count = sum(1 for word in BULLISH_KEYWORDS if word in text_lower)
     bearish_count = sum(1 for word in BEARISH_KEYWORDS if word in text_lower)
+    investment_count = sum(1 for word in INVESTMENT_KEYWORDS if word in text_lower)
 
-    # Base score dynamically influenced by price change % + article NLP
-    base_score = 65 + (price_change * 1.5) + (bullish_count * 5) - (bearish_count * 7)
+    # Base score dynamically influenced by price change % + article NLP + strategic investment boost
+    base_score = 65 + (price_change * 1.5) + (bullish_count * 5) + (investment_count * 6) - (bearish_count * 7)
     
     # Hash fallback modifier using ticker ASCII sum to ensure unique distinct score per stock if neutral
     ticker_hash_offset = (sum(ord(c) for c in ticker) % 17) - 8
-    final_score = int(max(18, min(97, base_score + ticker_hash_offset)))
+    final_score = int(max(18, min(98, base_score + ticker_hash_offset)))
+
 
     if final_score >= 75:
         sentiment = "Bullish"
