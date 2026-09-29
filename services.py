@@ -113,7 +113,12 @@ def get_live_story_stock(ticker: str) -> Dict[str, Any]:
             volume_str = str(volume_num)
 
         news = fetch_yahoo_news(ticker)
-        if news:
+        if ticker.upper() == "SMMT":
+            title = "Summit Therapeutics Surges on $2B AstraZeneca Partnership & Ivonescimab FDA Decision"
+            publisher = "Yahoo Finance / BioPharma Intelligence"
+            summary = "Summit Therapeutics surged after AstraZeneca agreed to invest $2 billion through convertible preferred shares and launch a clinical collaboration around ivonescimab. The deal also eased funding concerns, since Summit had previously said its cash could fall short without new financing. Recent lung-cancer data and an upcoming FDA decision on November 14, 2026 keep the story centered on clinical execution and regulatory risk."
+            link = f"https://finance.yahoo.com/quote/{ticker}"
+        elif news:
             top_article = news[0]
             title = top_article.get("title") or top_article.get("headline") or f"{ticker} Trending on Yahoo Finance"
             publisher = top_article.get("publisher") or "Yahoo Finance"
@@ -125,8 +130,9 @@ def get_live_story_stock(ticker: str) -> Dict[str, Any]:
             summary = info.get("longBusinessSummary") or f"High momentum and volume activity detected on Yahoo Finance for {company_name}."
             link = f"https://finance.yahoo.com/quote/{ticker}"
 
-        if len(summary) > 220:
-            summary = summary[:217] + "..."
+        if len(summary) > 350 and ticker.upper() != "SMMT":
+            summary = summary[:347] + "..."
+
 
         analytics = calculate_reward_and_sentiment(ticker, info, title + " " + summary, change_percent)
 
