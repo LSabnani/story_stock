@@ -36,9 +36,11 @@ class StoryStock(BaseModel):
     news_url: Optional[str] = "#"
     narrative_category: str
     product_impact: str
+    annual_revenue_impact: str
     sentiment: str
     sentiment_score: int
     timestamp: str
+
 
 @app.get("/api/v1/stories", response_model=List[StoryStock])
 def get_stories(

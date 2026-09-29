@@ -17,6 +17,7 @@
       --accent-green: #10b981;
       --accent-red: #ef4444;
       --accent-cyan: #06b6d4;
+      --accent-emerald: #059669;
       --text-main: #f9fafb;
       --text-muted: #9ca3af;
     }
@@ -250,14 +251,18 @@
       margin-bottom: 16px;
     }
 
-    .impact-box {
-      background: rgba(0, 0, 0, 0.25);
-      border-left: 3px solid var(--accent-cyan);
-      padding: 10px 14px;
-      border-radius: 0 10px 10px 0;
-      margin-bottom: 16px;
-      font-size: 12px;
-      color: #cbd5e1;
+    .revenue-impact-badge {
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #6ee7b7;
+      padding: 8px 12px;
+      border-radius: 10px;
+      margin-bottom: 14px;
+      font-size: 13px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
 
     .card-footer {
@@ -269,14 +274,23 @@
       font-size: 12px;
     }
 
+    .sentiment-badge-box {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
     .sentiment-score {
-      background: var(--accent-green);
-      color: #000;
-      padding: 2px 8px;
-      border-radius: 6px;
+      padding: 4px 10px;
+      border-radius: 8px;
       font-family: 'JetBrains Mono', monospace;
       font-weight: 700;
+      color: #fff;
     }
+
+    .bg-bullish { background: #10b981; color: #000; }
+    .bg-neutral { background: #3b82f6; color: #fff; }
+    .bg-bearish { background: #ef4444; color: #fff; }
   </style>
 </head>
 <body>
@@ -286,7 +300,7 @@
       <div class="logo-icon">S</div>
       <div>
         <div class="logo-title">Story Stocks</div>
-        <div style="font-size: 12px; color: var(--text-muted)">Sector & Industry Momentum Intelligence</div>
+        <div style="font-size: 12px; color: var(--text-muted)">Revenue Impact & Sentiment Intelligence</div>
       </div>
     </div>
     <div class="provider-pill">
@@ -296,7 +310,7 @@
   </header>
 
   <div class="search-box">
-    <input type="text" id="tickerSearchInput" class="search-input" placeholder="Enter stock ticker (e.g. NVDA, TSLA, AAPL, MSFT)..." onkeypress="if(event.key === 'Enter') addTicker()">
+    <input type="text" id="tickerSearchInput" class="search-input" placeholder="Enter stock ticker (e.g. FICO, IOVA, SDEV, CCL, NVTS, AAPL)..." onkeypress="if(event.key === 'Enter') addTicker()">
     <button class="btn-search" onclick="addTicker()">Analyze Ticker Story</button>
   </div>
 
@@ -329,7 +343,7 @@
 
   <div class="stories-grid" id="storiesGrid">
     <div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 40px;">
-      Fetching live Yahoo Finance news & stock stories...
+      Fetching live Yahoo Finance news & revenue impact models...
     </div>
   </div>
 
@@ -371,7 +385,7 @@
       if (!ticker) return;
 
       const grid = document.getElementById('storiesGrid');
-      grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 40px;">Analyzing story & news feed for <strong>${ticker}</strong> via Yahoo Finance...</div>`;
+      grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 40px;">Analyzing story & revenue impact for <strong>${ticker}</strong> via Yahoo Finance...</div>`;
 
       try {
         const res = await fetch(`${API_BASE}/stocks/${ticker}`);
@@ -397,6 +411,8 @@
 
       grid.innerHTML = stories.map(story => {
         const isPos = story.change_percent >= 0;
+        const sentClass = story.sentiment === 'Bullish' ? 'bg-bullish' : (story.sentiment === 'Bearish' ? 'bg-bearish' : 'bg-neutral');
+
         return `
           <div class="story-card">
             <div>
@@ -423,16 +439,16 @@
               </div>
               <div class="summary">${story.summary}</div>
               
-              <div class="impact-box">
-                <strong>Narrative Impact:</strong> ${story.product_impact}
+              <div class="revenue-impact-badge">
+                💵 <span>${story.annual_revenue_impact || story.product_impact}</span>
               </div>
             </div>
 
             <div class="card-footer">
               <span style="color: var(--text-muted)">Via ${story.publisher}</span>
-              <div style="display:flex; align-items:center; gap:6px;">
+              <div class="sentiment-badge-box">
                 <span style="color:var(--text-muted)">Sentiment</span>
-                <span class="sentiment-score">${story.sentiment_score}</span>
+                <span class="sentiment-score ${sentClass}">${story.sentiment_score} (${story.sentiment})</span>
               </div>
             </div>
           </div>

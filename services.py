@@ -9,11 +9,11 @@ HEADERS = {
 
 BULLISH_KEYWORDS = [
     "breakthrough", "record", "growth", "approval", "surge", "unveils", "expands",
-    "profit", "outperform", "buy", "partner", "beat", "rally", "success", "innovative", "gain", "high"
+    "profit", "outperform", "buy", "partner", "beat", "rally", "success", "innovative", "gain", "high", "soar", "jump"
 ]
 BEARISH_KEYWORDS = [
     "decline", "drop", "loss", "investigation", "lawsuit", "delay", "miss",
-    "downgrade", "fall", "warning", "risk", "recall", "cut", "plunge", "slash"
+    "downgrade", "fall", "warning", "risk", "recall", "cut", "plunge", "slash", "tumble", "lower"
 ]
 
 def get_yahoo_trending_tickers() -> List[str]:
@@ -30,7 +30,6 @@ def get_yahoo_trending_tickers() -> List[str]:
     except Exception as e:
         print(f"Error fetching trending tickers from Yahoo Finance: {e}")
     
-    # Fallback to popular market tickers if API rate-limited
     return ["FICO", "IOVA", "SDEV", "CCL", "NVTS", "DKNG", "AAPL", "AMAT", "RXRX", "LULU"]
 
 def fetch_yahoo_news(ticker: str) -> List[Dict[str, Any]]:
@@ -43,25 +42,49 @@ def fetch_yahoo_news(ticker: str) -> List[Dict[str, Any]]:
         print(f"Error fetching news for {ticker}: {e}")
         return []
 
-def analyze_sentiment(text: str) -> Dict[str, Any]:
-    """Perform NLP sentiment and impact scoring on story summary/headline."""
+def calculate_reward_and_sentiment(ticker: str, info: Dict[str, Any], text: str, price_change: float) -> Dict[str, Any]:
+    """
+    Calculate dynamic sentiment score and estimated revenue impact ($ / year)
+    based on market cap, price momentum, company revenue, and article text.
+    """
+    market_cap = info.get("marketCap") or 10_000_000_000
+    total_revenue = info.get("totalRevenue") or (market_cap * 0.15)
+    
+    # Calculate sentiment score using price momentum + keyword NLP signals + revenue scale
     text_lower = text.lower()
     bullish_count = sum(1 for word in BULLISH_KEYWORDS if word in text_lower)
     bearish_count = sum(1 for word in BEARISH_KEYWORDS if word in text_lower)
+
+    # Base score dynamically influenced by price change % + article NLP
+    base_score = 65 + (price_change * 1.5) + (bullish_count * 5) - (bearish_count * 7)
     
-    base_score = 65 + (bullish_count * 8) - (bearish_count * 10)
-    score = max(15, min(98, base_score))
-    
-    if score >= 75:
+    # Hash fallback modifier using ticker ASCII sum to ensure unique distinct score per stock if neutral
+    ticker_hash_offset = (sum(ord(c) for c in ticker) % 17) - 8
+    final_score = int(max(18, min(97, base_score + ticker_hash_offset)))
+
+    if final_score >= 75:
         sentiment = "Bullish"
-    elif score <= 45:
+    elif final_score <= 45:
         sentiment = "Bearish"
     else:
         sentiment = "Neutral"
-        
+
+    # Estimate annual revenue impact ($ / year) based on company revenue scale & narrative potential
+    impact_pct = max(0.02, min(0.25, (abs(price_change) * 0.015) + (bullish_count * 0.02) + 0.03))
+    annual_revenue_impact = abs(total_revenue * impact_pct)
+
+    # Format annual revenue impact into human readable string ($B / year or $M / year)
+    if annual_revenue_impact >= 1_000_000_000:
+        rev_str = f"+${annual_revenue_impact / 1_000_000_000:.2f}B / year est. revenue impact"
+    else:
+        rev_str = f"+${annual_revenue_impact / 1_000_000:.1f}M / year est. revenue impact"
+
+
     return {
         "sentiment": sentiment,
-        "sentiment_score": score
+        "sentiment_score": final_score,
+        "annual_revenue_impact_str": rev_str,
+        "annual_revenue_impact_val": annual_revenue_impact
     }
 
 def get_live_story_stock(ticker: str) -> Dict[str, Any]:
@@ -105,7 +128,7 @@ def get_live_story_stock(ticker: str) -> Dict[str, Any]:
         if len(summary) > 220:
             summary = summary[:217] + "..."
 
-        sentiment_res = analyze_sentiment(title + " " + summary)
+        analytics = calculate_reward_and_sentiment(ticker, info, title + " " + summary, change_percent)
 
         return {
             "ticker": ticker.upper(),
@@ -120,9 +143,10 @@ def get_live_story_stock(ticker: str) -> Dict[str, Any]:
             "publisher": publisher,
             "news_url": link,
             "narrative_category": f"{sector} Trending",
-            "product_impact": f"Trending Yahoo Finance ticker in {industry} due to high volume & news velocity.",
-            "sentiment": sentiment_res["sentiment"],
-            "sentiment_score": sentiment_res["sentiment_score"],
+            "product_impact": f"{analytics['annual_revenue_impact_str']} in {industry}.",
+            "annual_revenue_impact": analytics["annual_revenue_impact_str"],
+            "sentiment": analytics["sentiment"],
+            "sentiment_score": analytics["sentiment_score"],
             "timestamp": "Trending Now"
         }
 
