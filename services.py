@@ -16,6 +16,11 @@ BEARISH_KEYWORDS = [
     "downgrade", "fall", "warning", "risk", "recall", "cut", "plunge", "slash", "tumble", "lower"
 ]
 
+INVESTMENT_KEYWORDS = [
+    "invest", "investment", "funding", "financing", "billion", "million", "acquisition",
+    "venture", "capital", "backed", "stake", "partnership", "preferred shares", "convertible"
+]
+
 def get_yahoo_trending_tickers() -> List[str]:
     """Fetch live trending tickers dynamically directly from Yahoo Finance."""
     url = "https://query1.finance.yahoo.com/v1/finance/trending/US"
@@ -42,10 +47,22 @@ def fetch_yahoo_news(ticker: str) -> List[Dict[str, Any]]:
         print(f"Error fetching news for {ticker}: {e}")
         return []
 
-INVESTMENT_KEYWORDS = [
-    "invest", "investment", "funding", "financing", "billion", "million", "acquisition",
-    "venture", "capital", "backed", "stake", "partnership", "preferred shares", "convertible"
-]
+def fetch_stock_history(ticker: str, period: str = "1mo") -> List[Dict[str, Any]]:
+    """Fetch price history series for interactive charts overlaying news events."""
+    try:
+        t = yf.Ticker(ticker)
+        df = t.history(period=period)
+        history = []
+        for date, row in df.iterrows():
+            history.append({
+                "date": date.strftime("%Y-%m-%d"),
+                "close": round(float(row["Close"]), 2),
+                "volume": int(row["Volume"])
+            })
+        return history
+    except Exception as e:
+        print(f"Error fetching history for {ticker}: {e}")
+        return []
 
 def calculate_reward_and_sentiment(ticker: str, info: Dict[str, Any], text: str, price_change: float) -> Dict[str, Any]:
     """
@@ -56,19 +73,15 @@ def calculate_reward_and_sentiment(ticker: str, info: Dict[str, Any], text: str,
     market_cap = info.get("marketCap") or 10_000_000_000
     total_revenue = info.get("totalRevenue") or (market_cap * 0.15)
     
-    # Calculate sentiment score using price momentum + keyword NLP signals + investment signals
     text_lower = text.lower()
     bullish_count = sum(1 for word in BULLISH_KEYWORDS if word in text_lower)
     bearish_count = sum(1 for word in BEARISH_KEYWORDS if word in text_lower)
     investment_count = sum(1 for word in INVESTMENT_KEYWORDS if word in text_lower)
 
-    # Base score dynamically influenced by price change % + article NLP + strategic investment boost
     base_score = 65 + (price_change * 1.5) + (bullish_count * 5) + (investment_count * 6) - (bearish_count * 7)
     
-    # Hash fallback modifier using ticker ASCII sum to ensure unique distinct score per stock if neutral
     ticker_hash_offset = (sum(ord(c) for c in ticker) % 17) - 8
     final_score = int(max(18, min(98, base_score + ticker_hash_offset)))
-
 
     if final_score >= 75:
         sentiment = "Bullish"
@@ -77,16 +90,13 @@ def calculate_reward_and_sentiment(ticker: str, info: Dict[str, Any], text: str,
     else:
         sentiment = "Neutral"
 
-    # Estimate annual revenue impact ($ / year) based on company revenue scale & narrative potential
-    impact_pct = max(0.02, min(0.25, (abs(price_change) * 0.015) + (bullish_count * 0.02) + 0.03))
+    impact_pct = max(0.02, min(0.25, (abs(price_change) * 0.015) + (bullish_count * 0.02) + (investment_count * 0.03) + 0.03))
     annual_revenue_impact = abs(total_revenue * impact_pct)
 
-    # Format annual revenue impact into human readable string ($B / year or $M / year)
     if annual_revenue_impact >= 1_000_000_000:
         rev_str = f"+${annual_revenue_impact / 1_000_000_000:.2f}B / year est. revenue impact"
     else:
         rev_str = f"+${annual_revenue_impact / 1_000_000:.1f}M / year est. revenue impact"
-
 
     return {
         "sentiment": sentiment,
@@ -96,7 +106,7 @@ def calculate_reward_and_sentiment(ticker: str, info: Dict[str, Any], text: str,
     }
 
 def get_live_story_stock(ticker: str) -> Dict[str, Any]:
-    """Fetch ticker details, market metrics, sector, industry, and top story from Yahoo Finance."""
+    """Fetch ticker details, market metrics, sector, industry, price history, and top story from Yahoo Finance."""
     try:
         t = yf.Ticker(ticker)
         info = t.info
@@ -141,8 +151,8 @@ def get_live_story_stock(ticker: str) -> Dict[str, Any]:
         if len(summary) > 350 and ticker.upper() != "SMMT":
             summary = summary[:347] + "..."
 
-
         analytics = calculate_reward_and_sentiment(ticker, info, title + " " + summary, change_percent)
+        history = fetch_stock_history(ticker, period="1mo")
 
         return {
             "ticker": ticker.upper(),
@@ -161,7 +171,8 @@ def get_live_story_stock(ticker: str) -> Dict[str, Any]:
             "annual_revenue_impact": analytics["annual_revenue_impact_str"],
             "sentiment": analytics["sentiment"],
             "sentiment_score": analytics["sentiment_score"],
-            "timestamp": "Trending Now"
+            "timestamp": "Trending Now",
+            "price_history": history
         }
 
     except Exception as e:

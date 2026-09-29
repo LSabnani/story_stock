@@ -3,8 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
-from typing import List, Optional
-from services import get_live_story_stock, get_yahoo_trending_tickers
+from typing import List, Optional, Dict, Any
+from services import get_live_story_stock, get_yahoo_trending_tickers, fetch_stock_history
 
 app = FastAPI(title="Story Stocks API", version="1.0.0")
 
@@ -40,7 +40,7 @@ class StoryStock(BaseModel):
     sentiment: str
     sentiment_score: int
     timestamp: str
-
+    price_history: Optional[List[Dict[str, Any]]] = []
 
 @app.get("/api/v1/stories", response_model=List[StoryStock])
 def get_stories(
@@ -100,3 +100,8 @@ def get_stock_detail(ticker: str):
     if not data:
         return {"error": "Stock ticker not found"}
     return data
+
+@app.get("/api/v1/stocks/{ticker}/history")
+def get_stock_chart_history(ticker: str, period: Optional[str] = "1mo"):
+    history = fetch_stock_history(ticker, period=period)
+    return {"ticker": ticker.upper(), "period": period, "history": history}
